@@ -1,10 +1,13 @@
-import serial
+import socket
 import matplotlib.pyplot as plt
-import time
 
-# Set up the serial connection (replace 'COM3' with the appropriate port)
-ser = serial.Serial('COM3', 115200)
-time.sleep(2)  # Give time for the connection to establish
+# ESP32 IP and port
+esp32_ip = "192.168.1.100"  # Replace with your ESP32's IP address
+esp32_port = 80
+
+# Set up the socket connection
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.connect((esp32_ip, esp32_port))
 
 x_vals = []
 y_vals = []
@@ -25,12 +28,16 @@ def plot_location(x, y):
     plt.draw()
     plt.pause(0.01)
 
-while True:
-    if ser.in_waiting > 0:
-        line = ser.readline().decode('utf-8').rstrip()
-        if "Estimated Location" in line:
-            print(line)
-            parts = line.split(",")
+try:
+    while True:
+        data = client_socket.recv(1024).decode('utf-8')
+        if "Estimated Location" in data:
+            print(data)
+            parts = data.split(",")
             x = float(parts[0].split('=')[1].strip())
             y = float(parts[1].split('=')[1].strip())
             plot_location(x, y)
+except KeyboardInterrupt:
+    print("Exiting...")
+finally:
+    client_socket.close()
